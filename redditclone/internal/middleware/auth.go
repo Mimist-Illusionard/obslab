@@ -31,9 +31,10 @@ func (a *Auth) AuthMiddleware(next http.Handler) http.Handler {
 		claims, err := a.jwtS.ParseJwt(token)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
+			req := w.Header().Get("X-Request-ID")
 			a.logger.Error(
 				fmt.Sprintf("jwt parse error: %v", err),
-				zap.String("request_id", w.Header().Get("X-Request-ID")))
+				zap.String("request_id", req))
 			return
 		}
 

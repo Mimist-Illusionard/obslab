@@ -1,3 +1,4 @@
+name: obslab
 services:
   reddit:
     build: .
@@ -5,8 +6,8 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - reddit
+      - reddit-network
 
 networks:
-  reddit:
+  reddit-network:
     driver: bridge

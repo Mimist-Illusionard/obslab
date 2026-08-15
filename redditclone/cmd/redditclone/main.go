@@ -8,18 +8,25 @@ import (
 
 	"github.com/Mimist-Illusionard/obslab/internal/handlers"
 	"github.com/Mimist-Illusionard/obslab/internal/jwt"
+	"github.com/Mimist-Illusionard/obslab/internal/metrics"
 	"github.com/Mimist-Illusionard/obslab/internal/middleware"
 	"github.com/Mimist-Illusionard/obslab/internal/repository"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
-var port = flag.Int("port", 8080, "The port app listens on")
+var port = flag.Int("port", 8080, "The port app exposed on")
 
 func main() {
 	flag.Parse()
 
 	r := mux.NewRouter()
+	metric := metrics.New()
+	prometheus.MustRegister(metric.Hits)
+
+	r.Handle("/metrics", promhttp.Handler())
 
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./static/html/index.html")
@@ -43,7 +50,7 @@ func main() {
 	logger := middleware.NewLogger(10,
 		"X-Request-ID",
 		"abcdefghijklmnopqrstuvwxyz0123456789",
-		zapLogger)
+		zapLogger, metric)
 
 	jwtService := jwt.NewJwtGenerator("6sKqRZtGhIOAWIzO6yvPTBxUkD7P3CTIuvFexVtv5Rz")
 

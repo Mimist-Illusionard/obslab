@@ -1,10 +1,13 @@
 package middleware
 
 import (
+	"context"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/Mimist-Illusionard/obslab/internal/metrics"
 	"go.uber.org/zap"
 )
 
@@ -36,10 +39,11 @@ type Logger struct {
 	key     string
 	charset string
 	zap     *zap.Logger
+	metrics *metrics.Metrics
 }
 
-func NewLogger(length int, key, charset string, logger *zap.Logger) *Logger {
-	return &Logger{length: length, key: key, charset: charset, zap: logger}
+func NewLogger(length int, key, charset string, logger *zap.Logger, metrics *metrics.Metrics) *Logger {
+	return &Logger{length: length, key: key, charset: charset, zap: logger, metrics: metrics}
 }
 
 func (logger *Logger) LogMiddleware(next http.Handler) http.Handler {
@@ -50,8 +54,9 @@ func (logger *Logger) LogMiddleware(next http.Handler) http.Handler {
 
 		rw := newResponseWriter(w)
 		rw.Header().Add(requestIDHeader, reqID)
+		ctx := context.WithValue(r.Context(), "metrics", logger.metrics)
 
-		next.ServeHTTP(rw, r)
+		next.ServeHTTP(rw, r.WithContext(ctx))
 
 		fields := []zap.Field{
 			zap.String("request_id", reqID),
@@ -61,6 +66,8 @@ func (logger *Logger) LogMiddleware(next http.Handler) http.Handler {
 			zap.Int("status", rw.statusCode),
 			zap.Duration("work_time", time.Since(start)),
 		}
+
+		logger.metrics.Hits.WithLabelValues(strconv.Itoa(rw.statusCode), r.URL.Path).Inc()
 
 		if rw.statusCode >= 500 {
 			logger.zap.Error("request failed", fields...)

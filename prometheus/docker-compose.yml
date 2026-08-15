@@ -1,0 +1,16 @@
+name: obslab
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    expose:
+      - 9090
+    volumes:
+      - "./data:/etc/prometheus"
+    networks:
+      - obslab_reddit-network
+
+networks:
+  obslab_reddit-network:
+    external: true

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"time"
@@ -13,7 +14,11 @@ import (
 	"go.uber.org/zap"
 )
 
+var port = flag.Int("port", 8080, "The port app listens on")
+
 func main() {
+	flag.Parse()
+
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -59,10 +64,8 @@ func main() {
 	protected.Use(auth.AuthMiddleware)
 	ph.Initialize(protected)
 
-	port := 8083
-
 	server := &http.Server{
-		Addr:              fmt.Sprintf(":%d", port),
+		Addr:              fmt.Sprintf(":%d", *port),
 		Handler:           r,
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -72,7 +75,7 @@ func main() {
 
 	zapLogger.Info(
 		"starting server",
-		zap.Int("port", port),
+		zap.Int("port", *port),
 	)
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

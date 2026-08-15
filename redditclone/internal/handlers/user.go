@@ -36,9 +36,13 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		"password": "",
 	}
 
+	requestID := w.Header().Get("X-Request-ID")
 	err := json.NewDecoder(r.Body).Decode(&form)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		h.logger.Error(
+			fmt.Sprintf("json unmarhsal: %v", err.Error()),
+			zap.String("request_id", requestID))
 		return
 	}
 
@@ -47,8 +51,8 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "message:"+repository.ErrNoUser.Error(), 500)
 
 		h.logger.Warn(
-			fmt.Sprintf("username: %s", err.Error()),
-			zap.String("request_id", w.Header().Get("X-Request-ID")),
+			fmt.Sprintf("user get: %s", err.Error()),
+			zap.String("request_id", requestID),
 			zap.String("username", form["username"]))
 
 		return
@@ -58,7 +62,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 		h.logger.Error(
 			fmt.Sprintf("unexpected error: %v", err.Error()),
-			zap.String("request_id", w.Header().Get("X-Request-ID")),
+			zap.String("request_id", requestID),
 			zap.String("username", form["username"]))
 
 		return
@@ -69,8 +73,8 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "error generating token", 500)
 		h.logger.Error(
-			"error generating token",
-			zap.String("request_id", w.Header().Get("X-Request-ID")),
+			fmt.Sprintf("token generate: %v", err.Error()),
+			zap.String("request_id", requestID),
 			zap.String("username", form["username"]))
 		return
 	}
@@ -86,12 +90,13 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		"password": "",
 	}
 
+	requestID := w.Header().Get("X-Request-ID")
 	err := json.NewDecoder(r.Body).Decode(&form)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		h.logger.Error(
-			fmt.Sprintf("json unmarshaling: %v", err.Error()),
-			zap.String("request_id", w.Header().Get("X-Request-ID")))
+			fmt.Sprintf("json unmarshal: %v", err.Error()),
+			zap.String("request_id", requestID))
 		return
 	}
 
@@ -110,8 +115,8 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 
 		h.logger.Warn(
-			err.Error(),
-			zap.String("request_id", w.Header().Get("X-Request-ID")),
+			fmt.Sprintf("user exist: %v", err.Error()),
+			zap.String("request_id", requestID),
 			zap.String("username", form["username"]))
 
 		w.Header().Set("Content-Type", "application/json")
@@ -126,7 +131,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 		h.logger.Error(
 			fmt.Sprintf("unexpected error: %v", err.Error()),
-			zap.String("request_id", w.Header().Get("X-Request-ID")),
+			zap.String("request_id", requestID),
 			zap.String("username", form["username"]))
 		return
 	}
@@ -136,8 +141,8 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "error generating token", http.StatusInternalServerError)
 		h.logger.Error(
-			fmt.Sprintf("error generating token: %v", err.Error()),
-			zap.String("request_id", w.Header().Get("X-Request-ID")),
+			fmt.Sprintf("token generate: %v", err.Error()),
+			zap.String("request_id", requestID),
 			zap.String("username", form["username"]))
 		return
 	}

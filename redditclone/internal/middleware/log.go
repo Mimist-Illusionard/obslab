@@ -67,7 +67,9 @@ func (logger *Logger) LogMiddleware(next http.Handler) http.Handler {
 			zap.Duration("work_time", time.Since(start)),
 		}
 
-		logger.metrics.Hits.WithLabelValues(strconv.Itoa(rw.statusCode), r.URL.Path).Inc()
+		if r.URL.Path != "/metrics" {
+			logger.metrics.Hits.WithLabelValues(strconv.Itoa(rw.statusCode), r.URL.Path).Inc()
+		}
 
 		if rw.statusCode >= 500 {
 			logger.zap.Error("request failed", fields...)

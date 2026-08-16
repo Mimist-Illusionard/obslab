@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 )
 
@@ -28,6 +29,13 @@ func main() {
 
 	r := mux.NewRouter()
 	metric := metrics.New()
+
+	otel.SetErrorHandler(
+		otel.ErrorHandlerFunc(func(err error) {
+			log.Printf("OTEL ERROR: %v", err)
+		}),
+	)
+
 	tr, err := trace.New(context.Background())
 	if err != nil {
 		log.Printf("tracer create: %v", err)

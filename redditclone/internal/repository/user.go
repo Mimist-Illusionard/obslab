@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 	"strconv"
@@ -26,6 +27,9 @@ type UserMemoryRepository struct {
 }
 
 func (ur *UserMemoryRepository) Register(login, pass string) (*models.User, error) {
+	_, span := tracer.Start(context.Background(), "UserMemoryRepository.Register")
+	defer span.End()
+
 	ur.mu.Lock()
 	defer ur.mu.Unlock()
 
@@ -51,6 +55,9 @@ func (ur *UserMemoryRepository) Register(login, pass string) (*models.User, erro
 }
 
 func (ur *UserMemoryRepository) Login(login, pass string) (*models.User, error) {
+	_, span := tracer.Start(context.Background(), "UserMemoryRepository.Login")
+	defer span.End()
+
 	ur.mu.Lock()
 	defer ur.mu.Unlock()
 

@@ -1,11 +1,16 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"sync"
 
 	"github.com/Mimist-Illusionard/obslab/internal/models"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
+
+var tracer = otel.Tracer("github.com/Mimist-Illusionard/obslab/internal/repository")
 
 var (
 	ErrNoPost = errors.New("post doesn't exist")
@@ -49,6 +54,9 @@ func (r *PostMemoryRepository) List(category string) []models.Post {
 }
 
 func (r *PostMemoryRepository) Create(title, category, pType, text, url string, author *models.User) (*models.Post, error) {
+	_, span := tracer.Start(context.Background(), "PostMemoryRepository.Create")
+	defer span.End()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -62,6 +70,11 @@ func (r *PostMemoryRepository) Create(title, category, pType, text, url string, 
 }
 
 func (r *PostMemoryRepository) Get(id string) (*models.Post, error) {
+	_, span := tracer.Start(context.Background(), "PostMemoryRepository.Get")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("post.id", id))
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -76,6 +89,11 @@ func (r *PostMemoryRepository) Get(id string) (*models.Post, error) {
 }
 
 func (r *PostMemoryRepository) DeleteComment(postID, commentID string) (*models.Post, error) {
+	_, span := tracer.Start(context.Background(), "PostMemoryRepository.DeleteComment")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("post.id", postID), attribute.String("comment.id", commentID))
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -101,6 +119,11 @@ func (r *PostMemoryRepository) DeleteComment(postID, commentID string) (*models.
 }
 
 func (r *PostMemoryRepository) Save(post *models.Post) error {
+	_, span := tracer.Start(context.Background(), "PostMemoryRepository.Save")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("post.id", post.ID))
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -115,6 +138,11 @@ func (r *PostMemoryRepository) Save(post *models.Post) error {
 }
 
 func (r *PostMemoryRepository) Delete(id string) error {
+	_, span := tracer.Start(context.Background(), "PostMemoryRepository.Delete")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("post.id", id))
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -134,6 +162,11 @@ func (r *PostMemoryRepository) Delete(id string) error {
 }
 
 func (r *PostMemoryRepository) ListByUser(login string) ([]models.Post, error) {
+	_, span := tracer.Start(context.Background(), "PostMemoryRepository.ListByUser")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("username", login))
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

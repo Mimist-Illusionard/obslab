@@ -50,7 +50,8 @@ func (h *PostHandler) Initialize(r *mux.Router) *mux.Router {
 func (h *PostHandler) List(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	tracer.Start(r.Context(), "PostHandler.List")
+	_, span := tracer.Start(r.Context(), "PostHandler.List")
+	defer span.End()
 
 	posts := h.r.List(vars["category"])
 
@@ -108,7 +109,7 @@ func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	id := mux.Vars(r)["id"]
 	post, err := h.r.Get(id)
-	span.SetAttributes(attribute.String("id", id))
+	span.SetAttributes(attribute.String("post.id", id))
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -129,7 +130,7 @@ func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
 
 	id := mux.Vars(r)["id"]
 	post, err := h.r.Get(id)
-	span.SetAttributes(attribute.String("post id", id))
+	span.SetAttributes(attribute.String("post.id", id))
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -324,7 +325,7 @@ func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	id := vars["id"]
-	span.SetAttributes(attribute.String("post id", id))
+	span.SetAttributes(attribute.String("post.id", id))
 
 	post, err := h.r.Get(vars["id"])
 
@@ -378,7 +379,7 @@ func (h *PostHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	logger := Logger(ctx)
 	vars := mux.Vars(r)
-	span.SetAttributes(attribute.String("post id", vars["id"]))
+	span.SetAttributes(attribute.String("post.id", vars["id"]))
 
 	post, err := h.r.Get(vars["id"])
 

@@ -2,12 +2,13 @@ package trace
 
 import (
 	"context"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 func New(ctx context.Context) (*sdktrace.TracerProvider, error) {
@@ -32,7 +33,7 @@ func New(ctx context.Context) (*sdktrace.TracerProvider, error) {
 	}
 
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
+		sdktrace.WithSyncer(exporter),
 		sdktrace.WithResource(res),
 	)
 

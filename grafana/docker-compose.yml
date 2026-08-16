@@ -1,0 +1,13 @@
+name: obslab
+services:
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    user: "104"
+    networks:
+      - obslab_reddit-network
+
+networks:
+  obslab_reddit-network:
+    external: true

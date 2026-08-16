@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -11,9 +13,11 @@ import (
 	"github.com/Mimist-Illusionard/obslab/internal/metrics"
 	"github.com/Mimist-Illusionard/obslab/internal/middleware"
 	"github.com/Mimist-Illusionard/obslab/internal/repository"
+	"github.com/Mimist-Illusionard/obslab/internal/trace"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.uber.org/zap"
 )
 
@@ -24,7 +28,19 @@ func main() {
 
 	r := mux.NewRouter()
 	metric := metrics.New()
+	tr, err := trace.New(context.Background())
+	if err != nil {
+		log.Printf("tracer create: %v", err)
+	}
+
+	defer func() {
+		if err := tr.Shutdown(context.Background()); err != nil {
+			log.Printf("shutdown tracing: %v", err)
+		}
+	}()
+
 	prometheus.MustRegister(metric.RequestsTotal, metric.RequestDuration)
+	r.Use(otelmux.Middleware("redditclone"))
 
 	r.Handle("/metrics", promhttp.Handler())
 

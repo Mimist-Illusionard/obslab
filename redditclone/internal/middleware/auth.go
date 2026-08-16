@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Mimist-Illusionard/obslab/internal/jwt"
 	"go.uber.org/zap"
@@ -20,13 +21,25 @@ func NewAuth(s *jwt.JwtService, zap *zap.Logger) *Auth {
 
 func (a *Auth) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger, ok := r.Context().Value("logger").(*zap.Logger)
+		if !ok {
+			logger = zap.NewNop()
+		}
+
 		token := r.Header.Get("Authorization")
 		if token == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		token = token[7:] //We know that in header will be Bearer token
+		if !strings.HasPrefix(token, "Bearer ") {
+			logger.Warn("invalid authorization header")
+
+			http.Error(w, "invalid authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		token = strings.TrimPrefix(token, "Bearer ")
 
 		claims, err := a.jwtS.ParseJwt(token)
 		if err != nil {

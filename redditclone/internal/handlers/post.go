@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Mimist-Illusionard/obslab/internal/dto"
@@ -9,8 +10,13 @@ import (
 	"github.com/Mimist-Illusionard/obslab/internal/models"
 	"github.com/Mimist-Illusionard/obslab/internal/repository"
 	"github.com/gorilla/mux"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
 )
+
+var tracer = otel.Tracer("github.com/Mimist-Illusionard/obslab/internal/handlers")
 
 type PostHandler struct {
 	r      repository.PostRepository
@@ -44,34 +50,51 @@ func (h *PostHandler) Initialize(r *mux.Router) *mux.Router {
 func (h *PostHandler) List(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
+	tracer.Start(r.Context(), "PostHandler.List")
+
 	posts := h.r.List(vars["category"])
 
 	writeJSON(w, http.StatusOK, posts)
 }
 
 func (h *PostHandler) Add(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "PostHandler.Add")
+	defer span.End()
+
 	logger := Logger(r.Context())
 
 	post := models.Post{}
 
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
 		logger.Warn(
 			"json decode:",
 			zap.Error(err),
 		)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+
+		http.Error(w, "invalid json", http.StatusBadRequest)
+
 		return
 	}
+
+	span.SetAttributes(attribute.String("post.title", post.Title))
 
 	claims := r.Context().Value("claims").(jwt.Claims)
 	result, err := h.r.Create(post.Title, post.Category, post.Type, post.Text, post.Url, &claims.User)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		logger.Error(
 			"post create:",
 			zap.Error(err),
 		)
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+
+		http.Error(w, "Error when creating post", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -79,9 +102,18 @@ func (h *PostHandler) Add(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) {
-	post, err := h.r.Get(mux.Vars(r)["id"])
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "PostHandler.Get")
+	defer span.End()
+
+	id := mux.Vars(r)["id"]
+	post, err := h.r.Get(id)
+	span.SetAttributes(attribute.String("id", id))
+
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -89,20 +121,30 @@ func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "PostHandler.Comment")
+	defer span.End()
+
 	logger := Logger(r.Context())
 
-	vars := mux.Vars(r)
-	post, err := h.r.Get(vars["id"])
+	id := mux.Vars(r)["id"]
+	post, err := h.r.Get(id)
+	span.SetAttributes(attribute.String("post id", id))
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		logger.Error(
-			"comment get:",
+			"post get:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
 	claims := r.Context().Value("claims").(jwt.Claims)
+
+	span.SetAttributes(attribute.String("claims", fmt.Sprintf("%v", claims)))
 
 	comm := dto.CommentRequest{}
 	err = json.NewDecoder(r.Body).Decode(&comm)
@@ -111,6 +153,9 @@ func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"json decode:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -122,6 +167,9 @@ func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"post save:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -129,18 +177,31 @@ func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "PostHandler.DeleteComment")
+	defer span.End()
+
 	logger := Logger(r.Context())
 
 	vars := mux.Vars(r)
-	post, err := h.r.Get(vars["id"])
+	id := vars["id"]
 
+	span.SetAttributes(attribute.String("post id", id))
+
+	post, err := h.r.Get(id)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		logger.Error(
 			"comment get:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
+
+	commentId := vars["comment_id"]
+	span.SetAttributes(attribute.String("comment id", commentId))
 
 	err = post.DeleteComment(vars["comment_id"])
 	if err != nil {
@@ -148,6 +209,9 @@ func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"comment delete:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -157,6 +221,9 @@ func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"post save:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -164,8 +231,14 @@ func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Upvote(w http.ResponseWriter, r *http.Request) {
-	logger := Logger(r.Context())
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "PostHandler.Upvote")
+	defer span.End()
+
+	logger := Logger(ctx)
 	vars := mux.Vars(r)
+
+	span.SetAttributes(attribute.String("post id", vars["id"]))
 	post, err := h.r.Get(vars["id"])
 
 	if err != nil {
@@ -173,19 +246,27 @@ func (h *PostHandler) Upvote(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"comment get:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
 	claims := r.Context().Value("claims").(jwt.Claims)
+	span.SetAttributes(attribute.String("claims", fmt.Sprintf("%v", claims)))
 
 	post.Vote(&claims.User, 1)
 	post.RecalculateScore()
+
 	err = h.r.Save(post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.Error(
 			"post save:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -193,15 +274,25 @@ func (h *PostHandler) Upvote(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Downvote(w http.ResponseWriter, r *http.Request) {
-	logger := Logger(r.Context())
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "PostHandler.Downvote")
+	defer span.End()
+
+	logger := Logger(ctx)
 	vars := mux.Vars(r)
-	post, err := h.r.Get(vars["id"])
+	id := vars["id"]
+
+	span.SetAttributes(attribute.String("post id", id))
+	post, err := h.r.Get(id)
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		logger.Error(
 			"comment get:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -215,6 +306,9 @@ func (h *PostHandler) Downvote(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"post save:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -222,8 +316,16 @@ func (h *PostHandler) Downvote(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
-	logger := Logger(r.Context())
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "PostHandler.Unvote")
+	defer span.End()
+
+	logger := Logger(ctx)
 	vars := mux.Vars(r)
+
+	id := vars["id"]
+	span.SetAttributes(attribute.String("post id", id))
+
 	post, err := h.r.Get(vars["id"])
 
 	if err != nil {
@@ -231,10 +333,14 @@ func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"post get:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
 	claims := r.Context().Value("claims").(jwt.Claims)
+	span.SetAttributes(attribute.String("claims", fmt.Sprintf("%v", claims)))
 
 	err = post.Unvote(&claims.User)
 	if err != nil {
@@ -242,16 +348,23 @@ func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"unvote get:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
 	post.RecalculateScore()
+
 	err = h.r.Save(post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.Error(
 			"post save:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -259,8 +372,14 @@ func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	logger := Logger(r.Context())
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "PostHandler.Delete")
+	defer span.End()
+
+	logger := Logger(ctx)
 	vars := mux.Vars(r)
+	span.SetAttributes(attribute.String("post id", vars["id"]))
+
 	post, err := h.r.Get(vars["id"])
 
 	if err != nil {
@@ -268,6 +387,9 @@ func (h *PostHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"post get:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -277,6 +399,9 @@ func (h *PostHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"post delete:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -287,15 +412,26 @@ func (h *PostHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) User(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "PostHandler.User")
+	defer span.End()
+
 	vars := mux.Vars(r)
+	login := vars["login"]
+
+	span.SetAttributes(attribute.String("login", login))
+
 	if vars["login"] == "" {
 		w.WriteHeader(http.StatusBadRequest)
+		span.SetStatus(codes.Error, "login required")
 		return
 	}
 
 	result, err := h.r.ListByUser(vars["login"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 

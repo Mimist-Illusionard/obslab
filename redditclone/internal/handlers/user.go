@@ -9,6 +9,8 @@ import (
 	"github.com/Mimist-Illusionard/obslab/internal/jwt"
 	"github.com/Mimist-Illusionard/obslab/internal/repository"
 	"github.com/gorilla/mux"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +31,11 @@ func (h *UserHandler) Initialize(r *mux.Router) *mux.Router {
 }
 
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
-	logger := Logger(r.Context())
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "UserHandler.Login")
+	defer span.End()
+
+	logger := Logger(ctx)
 	form := map[string]string{
 		"username": "",
 		"password": "",
@@ -41,8 +47,13 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"json unmarhsal:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
+
+	span.SetAttributes(attribute.String("username", form["username"]))
 
 	user, err := h.ur.Login(form["username"], form["password"])
 	if errors.Is(err, repository.ErrNoUser) {
@@ -53,6 +64,8 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 			zap.String("username", form["username"]),
 			zap.Error(err))
 
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 	if err != nil {
@@ -63,6 +76,8 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 			zap.String("username", form["username"]),
 			zap.Error(err))
 
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -76,6 +91,8 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 			zap.String("username", form["username"]),
 			zap.Error(err))
 
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -85,7 +102,11 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
-	logger := Logger(r.Context())
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "UserHandler.Register")
+	defer span.End()
+
+	logger := Logger(ctx)
 	form := map[string]string{
 		"username": "",
 		"password": "",
@@ -97,8 +118,13 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"json unmarhsal:",
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
+
+	span.SetAttributes(attribute.String("username", form["username"]))
 
 	user, err := h.ur.Register(form["username"], form["password"])
 	if err != nil && errors.Is(err, repository.ErrHasUser) {
@@ -119,6 +145,9 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 			zap.String("username", form["username"]),
 			zap.Error(err))
 
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
 
@@ -133,6 +162,9 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 			"unexpected error:",
 			zap.String("username", form["username"]),
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
@@ -144,6 +176,9 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 			"token generate:",
 			zap.String("username", form["username"]),
 			zap.Error(err))
+
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 

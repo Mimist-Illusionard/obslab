@@ -59,10 +59,10 @@ func main() {
 	r.Use(logger.LogMiddleware)
 
 	um := repository.UserMemoryRepository{}
-	uh := handlers.NewUserHandler(&um, zapLogger, jwtService)
+	uh := handlers.NewUserHandler(&um, jwtService)
 
 	pr := repository.NewPostMemoryRepository()
-	ph := handlers.NewPostHandler(pr, zapLogger, jwtService)
+	ph := handlers.NewPostHandler(pr, jwtService)
 
 	api := r.PathPrefix("/api").Subrouter()
 	uh.Initialize(api)

@@ -14,7 +14,10 @@ import (
 const (
 	idLength        = 10
 	requestIDHeader = "X-Request-ID"
-	charset         = "abcdefghijklmnopqrstuvwxyz0123456789"
+	requestID       = "request_id"
+	loggerKey       = "logger"
+	metricsKey      = "metrics"
+	charset         = "abcdefghijklmnopqrstuvwxyz0123456789_-"
 )
 
 type responseWriter struct {
@@ -52,36 +55,44 @@ func (logger *Logger) LogMiddleware(next http.Handler) http.Handler {
 
 		reqID := generateID()
 
-		rw := newResponseWriter(w)
-		rw.Header().Add(requestIDHeader, reqID)
-		ctx := context.WithValue(r.Context(), "metrics", logger.metrics)
+		requestLogger := logger.zap.With(
+			zap.String("request_id", reqID),
+		)
 
-		next.ServeHTTP(rw, r.WithContext(ctx))
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, requestID, reqID)
+		ctx = context.WithValue(ctx, loggerKey, requestLogger)
+		ctx = context.WithValue(ctx, metricsKey, logger.metrics)
+
+		r = r.WithContext(ctx)
+
+		rw := newResponseWriter(w)
+
+		rw.Header().Add(requestIDHeader, reqID)
+
+		next.ServeHTTP(rw, r)
 
 		fields := []zap.Field{
-			zap.String("request_id", reqID),
 			zap.String("method", r.Method),
+			zap.String("path", r.URL.Path),
 			zap.String("remote_addr", r.RemoteAddr),
-			zap.String("url", r.URL.Path),
+			zap.String("user_agent", r.UserAgent()),
 			zap.Int("status", rw.statusCode),
-			zap.Duration("work_time", time.Since(start)),
+			zap.Duration("duration", time.Since(start)),
 		}
 
 		if r.URL.Path != "/metrics" {
 			logger.metrics.Hits.WithLabelValues(strconv.Itoa(rw.statusCode), r.URL.Path).Inc()
 		}
 
-		if rw.statusCode >= 500 {
-			logger.zap.Error("request failed", fields...)
-			return
+		switch {
+		case rw.statusCode >= 500:
+			requestLogger.Error("req failed", fields...)
+		case rw.statusCode >= 400:
+			requestLogger.Warn("req warn", fields...)
+		default:
+			requestLogger.Info("req completed", fields...)
 		}
-
-		if rw.statusCode >= 400 {
-			logger.zap.Warn("request completed with client error", fields...)
-			return
-		}
-
-		logger.zap.Info("request completed", fields...)
 	})
 }
 

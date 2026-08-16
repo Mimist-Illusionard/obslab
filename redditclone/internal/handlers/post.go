@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/Mimist-Illusionard/obslab/internal/dto"
@@ -19,8 +18,8 @@ type PostHandler struct {
 	logger *zap.Logger
 }
 
-func NewPostHandler(r repository.PostRepository, logger *zap.Logger, gen *jwt.JwtService) *PostHandler {
-	return &PostHandler{r: r, logger: logger, jwtGen: gen}
+func NewPostHandler(r repository.PostRepository, gen *jwt.JwtService) *PostHandler {
+	return &PostHandler{r: r, jwtGen: gen}
 }
 
 func (h *PostHandler) Initialize(r *mux.Router) *mux.Router {
@@ -51,15 +50,17 @@ func (h *PostHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Add(w http.ResponseWriter, r *http.Request) {
+	logger := Logger(r.Context())
+
 	post := models.Post{}
 
-	requestID := w.Header().Get("X-Request-ID")
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		h.logger.Error(
+		logger.Warn(
 			"json decode:",
-			zap.String("request_id", requestID))
+			zap.Error(err),
+		)
 		return
 	}
 
@@ -67,9 +68,10 @@ func (h *PostHandler) Add(w http.ResponseWriter, r *http.Request) {
 	result, err := h.r.Create(post.Title, post.Category, post.Type, post.Text, post.Url, &claims.User)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		h.logger.Error(
-			fmt.Sprintf("post create: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"post create:",
+			zap.Error(err),
+		)
 		return
 	}
 
@@ -87,15 +89,16 @@ func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
+	logger := Logger(r.Context())
+
 	vars := mux.Vars(r)
 	post, err := h.r.Get(vars["id"])
 
-	requestID := w.Header().Get("X-Request-ID")
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		h.logger.Error(
-			fmt.Sprintf("comment get: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"comment get:",
+			zap.Error(err))
 		return
 	}
 
@@ -105,9 +108,9 @@ func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(r.Body).Decode(&comm)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		h.logger.Error(
-			fmt.Sprintf("json decode: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"json decode:",
+			zap.Error(err))
 		return
 	}
 
@@ -116,9 +119,9 @@ func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
 	err = h.r.Save(post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		h.logger.Error(
-			fmt.Sprintf("post save: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"post save:",
+			zap.Error(err))
 		return
 	}
 
@@ -126,33 +129,34 @@ func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	logger := Logger(r.Context())
+
 	vars := mux.Vars(r)
 	post, err := h.r.Get(vars["id"])
 
-	requestID := w.Header().Get("X-Request-ID")
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		h.logger.Error(
-			fmt.Sprintf("comment get: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"comment get:",
+			zap.Error(err))
 		return
 	}
 
 	err = post.DeleteComment(vars["comment_id"])
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		h.logger.Error(
-			fmt.Sprintf("comment delete: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"comment delete:",
+			zap.Error(err))
 		return
 	}
 
 	err = h.r.Save(post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		h.logger.Error(
-			fmt.Sprintf("post save: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"post save:",
+			zap.Error(err))
 		return
 	}
 
@@ -160,15 +164,15 @@ func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Upvote(w http.ResponseWriter, r *http.Request) {
+	logger := Logger(r.Context())
 	vars := mux.Vars(r)
 	post, err := h.r.Get(vars["id"])
 
-	requestID := w.Header().Get("X-Request-ID")
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		h.logger.Error(
-			fmt.Sprintf("comment get: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"comment get:",
+			zap.Error(err))
 		return
 	}
 
@@ -179,9 +183,9 @@ func (h *PostHandler) Upvote(w http.ResponseWriter, r *http.Request) {
 	err = h.r.Save(post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		h.logger.Error(
-			fmt.Sprintf("post save: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"post save:",
+			zap.Error(err))
 		return
 	}
 
@@ -189,15 +193,15 @@ func (h *PostHandler) Upvote(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Downvote(w http.ResponseWriter, r *http.Request) {
+	logger := Logger(r.Context())
 	vars := mux.Vars(r)
 	post, err := h.r.Get(vars["id"])
 
-	requestID := w.Header().Get("X-Request-ID")
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		h.logger.Error(
-			fmt.Sprintf("comment get: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"comment get:",
+			zap.Error(err))
 		return
 	}
 
@@ -208,9 +212,9 @@ func (h *PostHandler) Downvote(w http.ResponseWriter, r *http.Request) {
 	err = h.r.Save(post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		h.logger.Error(
-			fmt.Sprintf("post save: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"post save:",
+			zap.Error(err))
 		return
 	}
 
@@ -218,15 +222,15 @@ func (h *PostHandler) Downvote(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
+	logger := Logger(r.Context())
 	vars := mux.Vars(r)
 	post, err := h.r.Get(vars["id"])
 
-	requestID := w.Header().Get("X-Request-ID")
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		h.logger.Error(
-			fmt.Sprintf("post get: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"post get:",
+			zap.Error(err))
 		return
 	}
 
@@ -235,9 +239,9 @@ func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
 	err = post.Unvote(&claims.User)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		h.logger.Error(
-			fmt.Sprintf("unvote: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"unvote get:",
+			zap.Error(err))
 		return
 	}
 
@@ -245,9 +249,9 @@ func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
 	err = h.r.Save(post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		h.logger.Error(
-			fmt.Sprintf("post save: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"post save:",
+			zap.Error(err))
 		return
 	}
 
@@ -255,24 +259,24 @@ func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	logger := Logger(r.Context())
 	vars := mux.Vars(r)
 	post, err := h.r.Get(vars["id"])
 
-	requestID := w.Header().Get("X-Request-ID")
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		h.logger.Error(
-			fmt.Sprintf("post get: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"post get:",
+			zap.Error(err))
 		return
 	}
 
 	err = h.r.Delete(post.ID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		h.logger.Error(
-			fmt.Sprintf("post delete: %v", err),
-			zap.String("request_id", requestID))
+		logger.Error(
+			"post delete:",
+			zap.Error(err))
 		return
 	}
 

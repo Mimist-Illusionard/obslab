@@ -10,6 +10,18 @@ services:
       - "./data:/etc/prometheus"
     networks:
       - obslab_reddit-network
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    networks:
+      - obslab_reddit-network
 
 networks:
   obslab_reddit-network:

@@ -1,13 +1,20 @@
 name: obslab
 services:
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:latest
     ports:
       - "3000:3000"
-    user: "104"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,victoriametrics-logs-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
     networks:
       - obslab_reddit-network
 
 networks:
   obslab_reddit-network:
     external: true
+
+volumes:
+  grafana-data:

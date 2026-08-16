@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Mimist-Illusionard/obslab/internal/metrics"
+	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
 
@@ -72,17 +73,33 @@ func (logger *Logger) LogMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(rw, r)
 
+		duration := time.Since(start)
+
+		route := "unknown"
+		if currentRoute := mux.CurrentRoute(r); currentRoute != nil {
+			if template, err := currentRoute.GetPathTemplate(); err == nil {
+				route = template
+			}
+		}
+
+		status := strconv.Itoa(rw.statusCode)
+		if r.URL.Path != "/metrics" {
+			logger.metrics.RequestsTotal.
+				WithLabelValues(r.Method, route, status).
+				Inc()
+
+			logger.metrics.RequestDuration.
+				WithLabelValues(r.Method, route, status).
+				Observe(duration.Seconds())
+		}
+
 		fields := []zap.Field{
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),
 			zap.String("remote_addr", r.RemoteAddr),
 			zap.String("user_agent", r.UserAgent()),
 			zap.Int("status", rw.statusCode),
-			zap.Duration("duration", time.Since(start)),
-		}
-
-		if r.URL.Path != "/metrics" {
-			logger.metrics.Hits.WithLabelValues(strconv.Itoa(rw.statusCode), r.URL.Path).Inc()
+			zap.Duration("duration", duration),
 		}
 
 		switch {

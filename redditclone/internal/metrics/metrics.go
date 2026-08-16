@@ -3,15 +3,39 @@ package metrics
 import "github.com/prometheus/client_golang/prometheus"
 
 type Metrics struct {
-	Hits *prometheus.CounterVec
+	RequestsTotal   *prometheus.CounterVec
+	RequestDuration *prometheus.HistogramVec
 }
 
 func New() *Metrics {
-	metrics := &Metrics{
-		Hits: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "hits",
-			Help: "The total number of requests made",
-		}, []string{"status", "path"}),
+	return &Metrics{
+		RequestsTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "http_requests_total",
+				Help: "Total number of HTTP requests",
+			},
+			[]string{"method", "route", "status"},
+		),
+
+		RequestDuration: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name: "http_request_duration_seconds",
+				Help: "HTTP request duration in seconds",
+				Buckets: []float64{
+					0.005,
+					0.01,
+					0.025,
+					0.05,
+					0.1,
+					0.25,
+					0.5,
+					1,
+					2.5,
+					5,
+					10,
+				},
+			},
+			[]string{"method", "route", "status"},
+		),
 	}
-	return metrics
 }

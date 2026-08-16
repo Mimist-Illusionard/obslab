@@ -24,7 +24,7 @@ func main() {
 
 	r := mux.NewRouter()
 	metric := metrics.New()
-	prometheus.MustRegister(metric.Hits)
+	prometheus.MustRegister(metric.RequestsTotal, metric.RequestDuration)
 
 	r.Handle("/metrics", promhttp.Handler())
 

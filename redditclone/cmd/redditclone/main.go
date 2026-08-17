@@ -10,6 +10,7 @@ import (
 
 	"github.com/Mimist-Illusionard/obslab/internal/handlers"
 	"github.com/Mimist-Illusionard/obslab/internal/jwt"
+	"github.com/Mimist-Illusionard/obslab/internal/logs"
 	"github.com/Mimist-Illusionard/obslab/internal/metrics"
 	"github.com/Mimist-Illusionard/obslab/internal/middleware"
 	"github.com/Mimist-Illusionard/obslab/internal/repository"
@@ -38,11 +39,14 @@ func main() {
 
 	tr, err := trace.New(context.Background())
 	if err != nil {
-		log.Printf("tracer create: %v", err)
+		log.Fatalf("tracer create: %v", err)
 	}
 
 	defer func() {
-		if err := tr.Shutdown(context.Background()); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := tr.Shutdown(ctx); err != nil {
 			log.Printf("shutdown tracing: %v", err)
 		}
 	}()
@@ -68,8 +72,7 @@ func main() {
 		http.ServeFile(w, r, "./static/html/favicon.ico")
 	}).Methods(http.MethodGet)
 
-	zapLogger, _ := zap.NewProduction()
-	defer zapLogger.Sync()
+	zapLogger, err := logs.NewLogger(logs.Zap)
 
 	logger := middleware.NewLogger(10,
 		"X-Request-ID",

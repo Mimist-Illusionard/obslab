@@ -5,6 +5,12 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    environment:
+      TRACE_BACKEND: ${TRACE_BACKEND:-jaeger}
+      OTEL_SERVICE_NAME: redditclone
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-jaeger:4317}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-development}
     networks:
       - reddit-network
 

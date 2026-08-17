@@ -3,6 +3,10 @@ module github.com/Mimist-Illusionard/obslab
 go 1.26.1
 
 require (
+	github.com/getsentry/sentry-go v0.48.0
+	github.com/getsentry/sentry-go/otel v0.48.0
+	github.com/getsentry/sentry-go/otel/otlp v0.48.0
+	github.com/getsentry/sentry-go/zap v0.48.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/gorilla/mux v1.8.1
 	github.com/prometheus/client_golang v1.24.1
@@ -29,6 +33,7 @@ require (
 	github.com/prometheus/procfs v0.21.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.45.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.45.0 // indirect
 	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect

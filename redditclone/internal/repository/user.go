@@ -17,8 +17,8 @@ var (
 )
 
 type UserRepository interface {
-	Login(login, pass string) (*models.User, error)
-	Register(login, pass string) (*models.User, error)
+	Login(ctx context.Context, login, pass string) (*models.User, error)
+	Register(ctx context.Context, login, pass string) (*models.User, error)
 }
 
 type UserMemoryRepository struct {
@@ -26,8 +26,8 @@ type UserMemoryRepository struct {
 	mu    sync.Mutex
 }
 
-func (ur *UserMemoryRepository) Register(login, pass string) (*models.User, error) {
-	_, span := tracer.Start(context.Background(), "UserMemoryRepository.Register")
+func (ur *UserMemoryRepository) Register(ctx context.Context, login, pass string) (*models.User, error) {
+	_, span := tracer.Start(ctx, "UserMemoryRepository.Register")
 	defer span.End()
 
 	ur.mu.Lock()
@@ -54,8 +54,8 @@ func (ur *UserMemoryRepository) Register(login, pass string) (*models.User, erro
 	return &u, nil
 }
 
-func (ur *UserMemoryRepository) Login(login, pass string) (*models.User, error) {
-	_, span := tracer.Start(context.Background(), "UserMemoryRepository.Login")
+func (ur *UserMemoryRepository) Login(ctx context.Context, login, pass string) (*models.User, error) {
+	_, span := tracer.Start(ctx, "UserMemoryRepository.Login")
 	defer span.End()
 
 	ur.mu.Lock()

@@ -50,10 +50,11 @@ func (h *PostHandler) Initialize(r *mux.Router) *mux.Router {
 func (h *PostHandler) List(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	_, span := tracer.Start(r.Context(), "PostHandler.List")
+	ctx := r.Context()
+	ctx, span := tracer.Start(r.Context(), "PostHandler.List")
 	defer span.End()
 
-	posts := h.r.List(vars["category"])
+	posts := h.r.List(ctx, vars["category"])
 
 	writeJSON(w, http.StatusOK, posts)
 }
@@ -84,7 +85,7 @@ func (h *PostHandler) Add(w http.ResponseWriter, r *http.Request) {
 	span.SetAttributes(attribute.String("post.title", post.Title))
 
 	claims := r.Context().Value("claims").(jwt.Claims)
-	result, err := h.r.Create(post.Title, post.Category, post.Type, post.Text, post.Url, &claims.User)
+	result, err := h.r.Create(ctx, post.Title, post.Category, post.Type, post.Text, post.Url, &claims.User)
 	if err != nil {
 		logger.Error(
 			"post create:",
@@ -108,7 +109,7 @@ func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	id := mux.Vars(r)["id"]
-	post, err := h.r.Get(id)
+	post, err := h.r.Get(ctx, id)
 	span.SetAttributes(attribute.String("post.id", id))
 
 	if err != nil {
@@ -129,7 +130,7 @@ func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
 	logger := Logger(r.Context())
 
 	id := mux.Vars(r)["id"]
-	post, err := h.r.Get(id)
+	post, err := h.r.Get(ctx, id)
 	span.SetAttributes(attribute.String("post.id", id))
 
 	if err != nil {
@@ -162,7 +163,7 @@ func (h *PostHandler) Comment(w http.ResponseWriter, r *http.Request) {
 
 	post.AddComment(comm.Comment, &claims.User)
 
-	err = h.r.Save(post)
+	err = h.r.Save(ctx, post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.Error(
@@ -189,7 +190,7 @@ func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 
 	span.SetAttributes(attribute.String("post id", id))
 
-	post, err := h.r.Get(id)
+	post, err := h.r.Get(ctx, id)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		logger.Error(
@@ -216,7 +217,7 @@ func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.r.Save(post)
+	err = h.r.Save(ctx, post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.Error(
@@ -240,7 +241,7 @@ func (h *PostHandler) Upvote(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	span.SetAttributes(attribute.String("post id", vars["id"]))
-	post, err := h.r.Get(vars["id"])
+	post, err := h.r.Get(ctx, vars["id"])
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -259,7 +260,7 @@ func (h *PostHandler) Upvote(w http.ResponseWriter, r *http.Request) {
 	post.Vote(&claims.User, 1)
 	post.RecalculateScore()
 
-	err = h.r.Save(post)
+	err = h.r.Save(ctx, post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.Error(
@@ -284,7 +285,7 @@ func (h *PostHandler) Downvote(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 
 	span.SetAttributes(attribute.String("post id", id))
-	post, err := h.r.Get(id)
+	post, err := h.r.Get(ctx, id)
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -301,7 +302,7 @@ func (h *PostHandler) Downvote(w http.ResponseWriter, r *http.Request) {
 
 	post.Vote(&claims.User, -1)
 	post.RecalculateScore()
-	err = h.r.Save(post)
+	err = h.r.Save(ctx, post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.Error(
@@ -327,7 +328,7 @@ func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 	span.SetAttributes(attribute.String("post.id", id))
 
-	post, err := h.r.Get(vars["id"])
+	post, err := h.r.Get(ctx, vars["id"])
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -357,7 +358,7 @@ func (h *PostHandler) Unvote(w http.ResponseWriter, r *http.Request) {
 
 	post.RecalculateScore()
 
-	err = h.r.Save(post)
+	err = h.r.Save(ctx, post)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.Error(
@@ -381,7 +382,7 @@ func (h *PostHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	span.SetAttributes(attribute.String("post.id", vars["id"]))
 
-	post, err := h.r.Get(vars["id"])
+	post, err := h.r.Get(ctx, vars["id"])
 
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -394,7 +395,7 @@ func (h *PostHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.r.Delete(post.ID)
+	err = h.r.Delete(ctx, post.ID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.Error(
@@ -428,7 +429,7 @@ func (h *PostHandler) User(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.r.ListByUser(vars["login"])
+	result, err := h.r.ListByUser(ctx, vars["login"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		span.RecordError(err)

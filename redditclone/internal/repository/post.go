@@ -17,13 +17,13 @@ var (
 )
 
 type PostRepository interface {
-	List(category string) []models.Post
-	ListByUser(login string) ([]models.Post, error)
-	Create(title, category, pType, text, url string, author *models.User) (*models.Post, error)
-	Get(id string) (*models.Post, error)
-	Save(post *models.Post) error
-	DeleteComment(postId, commentId string) (*models.Post, error)
-	Delete(postId string) error
+	List(ctx context.Context, category string) []models.Post
+	ListByUser(ctx context.Context, login string) ([]models.Post, error)
+	Create(ctx context.Context, title, category, pType, text, url string, author *models.User) (*models.Post, error)
+	Get(ctx context.Context, id string) (*models.Post, error)
+	Save(ctx context.Context, post *models.Post) error
+	DeleteComment(ctx context.Context, postId, commentId string) (*models.Post, error)
+	Delete(ctx context.Context, postId string) error
 }
 
 type PostMemoryRepository struct {
@@ -35,7 +35,7 @@ func NewPostMemoryRepository() *PostMemoryRepository {
 	return &PostMemoryRepository{posts: make([]models.Post, 0)}
 }
 
-func (r *PostMemoryRepository) List(category string) []models.Post {
+func (r *PostMemoryRepository) List(ctx context.Context, category string) []models.Post {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -53,8 +53,8 @@ func (r *PostMemoryRepository) List(category string) []models.Post {
 	return result
 }
 
-func (r *PostMemoryRepository) Create(title, category, pType, text, url string, author *models.User) (*models.Post, error) {
-	_, span := tracer.Start(context.Background(), "PostMemoryRepository.Create")
+func (r *PostMemoryRepository) Create(ctx context.Context, title, category, pType, text, url string, author *models.User) (*models.Post, error) {
+	_, span := tracer.Start(ctx, "PostMemoryRepository.Create")
 	defer span.End()
 
 	r.mu.Lock()
@@ -69,8 +69,8 @@ func (r *PostMemoryRepository) Create(title, category, pType, text, url string, 
 	return p, nil
 }
 
-func (r *PostMemoryRepository) Get(id string) (*models.Post, error) {
-	_, span := tracer.Start(context.Background(), "PostMemoryRepository.Get")
+func (r *PostMemoryRepository) Get(ctx context.Context, id string) (*models.Post, error) {
+	_, span := tracer.Start(ctx, "PostMemoryRepository.Get")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("post.id", id))
@@ -88,8 +88,8 @@ func (r *PostMemoryRepository) Get(id string) (*models.Post, error) {
 	return nil, ErrNoPost
 }
 
-func (r *PostMemoryRepository) DeleteComment(postID, commentID string) (*models.Post, error) {
-	_, span := tracer.Start(context.Background(), "PostMemoryRepository.DeleteComment")
+func (r *PostMemoryRepository) DeleteComment(ctx context.Context, postID, commentID string) (*models.Post, error) {
+	_, span := tracer.Start(ctx, "PostMemoryRepository.DeleteComment")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("post.id", postID), attribute.String("comment.id", commentID))
@@ -118,8 +118,8 @@ func (r *PostMemoryRepository) DeleteComment(postID, commentID string) (*models.
 	return &r.posts[index], nil
 }
 
-func (r *PostMemoryRepository) Save(post *models.Post) error {
-	_, span := tracer.Start(context.Background(), "PostMemoryRepository.Save")
+func (r *PostMemoryRepository) Save(ctx context.Context, post *models.Post) error {
+	_, span := tracer.Start(ctx, "PostMemoryRepository.Save")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("post.id", post.ID))
@@ -137,8 +137,8 @@ func (r *PostMemoryRepository) Save(post *models.Post) error {
 	return ErrNoPost
 }
 
-func (r *PostMemoryRepository) Delete(id string) error {
-	_, span := tracer.Start(context.Background(), "PostMemoryRepository.Delete")
+func (r *PostMemoryRepository) Delete(ctx context.Context, id string) error {
+	_, span := tracer.Start(ctx, "PostMemoryRepository.Delete")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("post.id", id))
@@ -161,8 +161,8 @@ func (r *PostMemoryRepository) Delete(id string) error {
 	return nil
 }
 
-func (r *PostMemoryRepository) ListByUser(login string) ([]models.Post, error) {
-	_, span := tracer.Start(context.Background(), "PostMemoryRepository.ListByUser")
+func (r *PostMemoryRepository) ListByUser(ctx context.Context, login string) ([]models.Post, error) {
+	_, span := tracer.Start(ctx, "PostMemoryRepository.ListByUser")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("username", login))

@@ -55,7 +55,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	span.SetAttributes(attribute.String("username", form["username"]))
 
-	user, err := h.ur.Login(form["username"], form["password"])
+	user, err := h.ur.Login(ctx, form["username"], form["password"])
 	if errors.Is(err, repository.ErrNoUser) {
 		http.Error(w, "message:"+repository.ErrNoUser.Error(), 500)
 
@@ -126,7 +126,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	span.SetAttributes(attribute.String("username", form["username"]))
 
-	user, err := h.ur.Register(form["username"], form["password"])
+	user, err := h.ur.Register(ctx, form["username"], form["password"])
 	if err != nil && errors.Is(err, repository.ErrHasUser) {
 
 		errResponse := dto.ErrorResponse{

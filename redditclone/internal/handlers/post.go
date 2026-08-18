@@ -21,7 +21,6 @@ var tracer = otel.Tracer("github.com/Mimist-Illusionard/obslab/internal/handlers
 type PostHandler struct {
 	r      repository.PostRepository
 	jwtGen *jwt.JwtService
-	logger *zap.Logger
 }
 
 func NewPostHandler(r repository.PostRepository, gen *jwt.JwtService) *PostHandler {
@@ -51,7 +50,7 @@ func (h *PostHandler) List(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	ctx := r.Context()
-	ctx, span := tracer.Start(r.Context(), "PostHandler.List")
+	ctx, span := tracer.Start(ctx, "PostHandler.List")
 	defer span.End()
 
 	posts := h.r.List(ctx, vars["category"])
@@ -442,6 +441,10 @@ func (h *PostHandler) User(w http.ResponseWriter, r *http.Request) {
 
 func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
 }

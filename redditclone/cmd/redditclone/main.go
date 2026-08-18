@@ -72,7 +72,7 @@ func main() {
 		http.ServeFile(w, r, "./static/html/favicon.ico")
 	}).Methods(http.MethodGet)
 
-	zapLogger, err := logs.NewLogger(logs.Zap)
+	zapLogger, _ := logs.NewLogger(logs.Zap)
 
 	logger := middleware.NewLogger(10,
 		"X-Request-ID",

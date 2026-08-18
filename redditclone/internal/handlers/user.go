@@ -98,7 +98,9 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(token)
+	if err := json.NewEncoder(w).Encode(token); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -151,7 +153,9 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
 
-		json.NewEncoder(w).Encode(errResponse)
+		if err := json.NewEncoder(w).Encode(errResponse); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 

@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -53,10 +52,10 @@ func (jwtGen *JwtService) ParseJwt(tokenStr string) (*Claims, error) {
 	})
 
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("bad token: %v", err))
+		return nil, fmt.Errorf("bad token: %v", err)
 	}
 	if !token.Valid {
-		return nil, errors.New(fmt.Sprintf("token is not valid: %v", err))
+		return nil, fmt.Errorf("token is not valid: %v", err)
 	}
 
 	return claims, nil

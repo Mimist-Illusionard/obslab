@@ -9,6 +9,7 @@ import (
 
 	"github.com/Mimist-Illusionard/obslab/internal/metrics"
 	"github.com/gorilla/mux"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -58,6 +59,8 @@ func (logger *Logger) LogMiddleware(next http.Handler) http.Handler {
 
 		requestLogger := logger.zap.With(
 			zap.String("request_id", reqID),
+			zap.String("span_id", trace.SpanContextFromContext(r.Context()).SpanID().String()),
+			zap.String("trace_id", trace.SpanContextFromContext(r.Context()).TraceID().String()),
 		)
 
 		ctx := r.Context()

@@ -32,3 +32,5 @@ go.work.sum
 .vscode/
 
 task.md
+prometheus/data/chat-id.txt
+prometheus/data/token.txt

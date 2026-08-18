@@ -22,6 +22,18 @@ services:
       - /sys:/host/sys:ro
     networks:
       - obslab_reddit-network
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    volumes:
+      - "./data/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro"
+      - "./data/token.txt:/etc/alertmanager/token.txt:ro"
+      - "./data/chat-id.txt:/etc/alertmanager/chat-id.txt:ro"
+    networks:
+      - obslab_reddit-network
 
 networks:
   obslab_reddit-network:

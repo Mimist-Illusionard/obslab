@@ -4,9 +4,9 @@
 
 `obslab` is a hands-on observability lab built around a Reddit clone written in Go.
 
-The project demonstrates how application metrics, structured logs, distributed traces and alerting can be connected into a single monitoring stack using **Prometheus**, **Grafana**, **Alertmanager**, **Jaeger**, **OpenTelemetry** and **Sentry**.
+The project demonstrates how application metrics, structured logs, distributed traces and alerting can be connected into a single monitoring stack using **Prometheus**, **Grafana**, **Alertmanager**, **Jaeger**, **OpenTelemetry**.
 
-The Reddit clone acts as an instrumented demo application: it exposes Prometheus metrics, propagates request and trace identifiers through logs, creates OpenTelemetry spans for HTTP and repository operations, and can export traces either to Jaeger or Sentry.
+The Reddit clone acts as an instrumented demo application: it exposes Prometheus metrics, propagates request and trace identifiers through logs, creates OpenTelemetry spans for HTTP and repository operations, and can export traces either to Jaeger.
 
 ## What this project demonstrates
 
@@ -304,26 +304,6 @@ OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
 ```
 
 The same values are provided as defaults by `redditclone/docker-compose.yml`.
-
-### Sentry
-
-To export tracing data to Sentry instead, configure:
-
-```env
-TRACE_BACKEND=sentry
-OTEL_SERVICE_NAME=redditclone
-SENTRY_DSN=<your-sentry-dsn>
-SENTRY_ENVIRONMENT=development
-```
-
-Then start the application with the Sentry environment file:
-
-```bash
-cd redditclone
-docker compose --env-file .env.sentry up -d --build
-```
-
-`SENTRY_DSN` is required when `TRACE_BACKEND=sentry` is selected.
 
 ## Alerting
 

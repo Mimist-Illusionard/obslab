@@ -2,7 +2,7 @@ groups:
   - name: default
     rules:
       - alert: InternalServerError
-        expr: increase(http_requests_total{status="200"}[1m]) > 0
+        expr: increase(http_requests_total{status="500"}[1m]) > 0
         for: 1s
         labels:
           severity: critical

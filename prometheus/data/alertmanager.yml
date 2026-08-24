@@ -12,6 +12,6 @@ route:
 receivers:
   - name: "telegram-bot"
     telegram_configs:
-      - chat_id_file: /etc/alertmanager/token.txt
-        bot_token_file: /etc/alertmanager/chat-id.txt
+      - chat_id_file: /etc/alertmanager/chat-id.txt
+        bot_token_file: /etc/alertmanager/token.txt
         send_resolved: true
